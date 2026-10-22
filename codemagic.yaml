@@ -43,7 +43,8 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build 2>&1 | tee "$HOME/xcodebuild.log"
+          exit ${PIPESTATUS[0]}
 
       - name: Package IPA
         script: |
@@ -62,3 +63,4 @@ workflows:
 
     artifacts:
       - "$HOME/ThaiLiveOverlay-unsigned.ipa"
+      - "$HOME/xcodebuild.log"
