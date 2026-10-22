@@ -320,13 +320,8 @@ private final class SampleBufferPlaybackDelegate: NSObject, AVPictureInPictureSa
     ) {
         completionHandler()
     }
-
-    func pictureInPictureController(
-        _ pictureInPictureController: AVPictureInPictureController,
-        skipByInterval skipInterval: CMTime
-    ) async -> Void {
-        // ไม่ใช้การข้ามช่วงเวลา
-    }
+    // หมายเหตุ: Swift สร้างเมธอด async ให้อัตโนมัติจากตัว completion ข้างบน
+    // (ถ้าเขียนทั้งสองตัวจะชนกันเรื่อง Objective-C selector)
 }
 
 /// delegate ของ PiP ตัวหลัก (ปุ่มปิด/กลับมาแอป)
