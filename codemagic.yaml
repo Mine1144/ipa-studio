@@ -60,12 +60,15 @@ workflows:
 
       - name: Report errors to ntfy
         script: |
-          {
-            echo "build: ThaiLiveOverlay"
-            echo "repo: Mine1144/ipa-translator"
-            grep -E "error:|error generated|BUILD FAILED" "$HOME/xcodebuild.log" | head -22
-          } | head -c 3000 | curl -s --max-time 30 -H "Title: ThaiLiveOverlay build" --data-binary @- "https://ntfy.sh/ipa-build-log-7411" || true
-          echo ""
+          grep -E "error:|error generated" "$HOME/xcodebuild.log" | head -80 | split -l 16 - /tmp/errchunk_
+          for f in /tmp/errchunk_*; do
+            {
+              echo "build: ThaiLiveOverlay"
+              cat "$f"
+            } | head -c 3000 | curl -s --max-time 30 -H "Title: ThaiLiveOverlay errors" --data-binary @- "https://ntfy.sh/ipa-build-log-7411" || true
+            echo ""
+            sleep 1
+          done
 
       - name: Package IPA
         script: |

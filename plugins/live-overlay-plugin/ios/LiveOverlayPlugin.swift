@@ -251,15 +251,10 @@ public class LiveOverlayPlugin: CAPPlugin, CAPBridgedPlugin {
         rotationSetting = call.getString("rotation") ?? "auto"
         emitFaces = call.getBool("emitFaces") ?? true
 
-        RPScreenRecorder.shared().requestCaptureAuthorization { [weak self] granted in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if !granted {
-                    call.reject("ผู้ใช้ไม่อนุญาตให้บันทึกหน้าจอ (ไปที่ Settings > Privacy > Screen Recording)")
-                    return
-                }
-                self.beginCapture(call)
-            }
+        // iOS จะขออนุญาตเองตอนเริ่ม capture ครั้งแรก (ถ้ายังไม่อนุญาตจะได้ error กลับมา)
+        DispatchQueue.main.async {
+            self.beginCapture(call)
+        }
         }
     }
 
@@ -286,13 +281,8 @@ public class LiveOverlayPlugin: CAPPlugin, CAPBridgedPlugin {
                     self.notifyListeners("captureError", data: ["message": error.localizedDescription])
                     return
                 }
-                switch bufferType {
-                case .video:
+                if bufferType == .video {
                     self.handleFrame(sampleBuffer)
-                case .audio:
-                    self.audioTap.handleReplayKit(sampleBuffer: sampleBuffer)
-                @unknown default:
-                    break
                 }
             },
             completionHandler: { error in
@@ -430,8 +420,9 @@ public class LiveOverlayPlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: - Face analysis for in-app video mode (base64 image)
 
     @objc func analyzeFaces(_ call: CAPPluginCall) {
-        guard let base64 = call.getString("base64"),
-              let data = Data(base64: base64.replacingOccurrences(of: "data:image/jpeg;base64,", with: "").base64Encoded),
+        let raw = call.getString("base64") ?? ""
+        let cleaned = raw.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
+        guard let data = Data(base64: cleaned),
               let image = UIImage(data: data),
               let cgImage = image.cgImage else {
             call.reject("อ่านรูปไม่สำเร็จ")

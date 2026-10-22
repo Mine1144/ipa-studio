@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import AVKit
 import UIKit
 import CoreMedia
 import CoreVideo

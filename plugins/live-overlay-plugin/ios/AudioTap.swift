@@ -1,9 +1,11 @@
 import Foundation
 import AVFoundation
-import CoreMedia
 
-/// ดักเสียง (จาก ReplayKit หรือไมโครโฟน) → แปลงเป็น PCM 16kHz mono 16-bit → ตัดเป็น WAV 1 วินาที
-/// ส่งกลับผ่าน callback เพื่อเอาไปยิง Typhoon ASR
+/// ดักเสียงจากไมโครโฟน → แปลงเป็น PCM 16kHz mono 16-bit → ตัดเป็น WAV 1 วินาที
+/// ใช้ส่งไปยัง Typhoon ASR
+///
+/// หมายเหตุ: RPScreenRecorder ใน SDK นี้ไม่มี RPSampleBufferType.audio
+/// จึงดักเสียงระบบของแอปอื่นไม่ได้ → ใช้เสียงจากไมโครโฟนแทน
 final class AudioTap {
 
     /// (wav data, ระดับความดัง 0...1)
@@ -17,76 +19,13 @@ final class AudioTap {
     private var converterInputChannels: AVAudioChannelCount = 0
 
     private var engine: AVAudioEngine?
-    private var micActive = false
 
-    var isMicActive: Bool { micActive }
+    var isMicActive: Bool { engine != nil }
 
-    // MARK: - ReplayKit (เสียงที่ระบบ/แอปที่กำลังอัดส่งมา)
-
-    func handleReplayKit(sampleBuffer: CMSampleBuffer) {
-        guard let fmtDesc = CMSampleBufferGetFormatDescription(sampleBuffer),
-              let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(fmtDesc) else { return }
-
-        let channels = AVAudioChannelCount(asbd.pointee.mChannelsPerFrame)
-        let frames = Int(CMSampleBufferGetNumSamples(sampleBuffer))
-        guard frames > 0, channels > 0, let dataBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else { return }
-
-        CMBlockBufferAssureBlockMemory(dataBuffer)
-
-        var lengthAtOffset = 0
-        var totalLength = 0
-        var dataPointer: UnsafeMutablePointer<Int8>?
-        var dataPointerOffset: UInt32 = 0
-        let status = CMBlockBufferGetDataPointer(
-            dataBuffer,
-            atOffset: 0,
-            lengthAtOffsetOut: &lengthAtOffset,
-            totalLengthOut: &totalLength,
-            dataPointerOut: &dataPointer,
-            dataPointerFrameOffsetOut: &dataPointerOffset
-        )
-        guard status == kCMBlockBufferNoErr, let ptr = dataPointer, lengthAtOffset > 0 else { return }
-
-        let sampleRate = asbd.pointee.mSampleRate
-        let isFloat = (asbd.pointee.mFormatFlags & kAudioFormatFlagIsFloat) != 0
-        let bytesPerSample = Int(asbd.pointee.mBitsPerChannel) / 8
-        guard bytesPerSample > 0 else { return }
-
-        // สร้างบัฟเฟอร์แบบ non-interleaved (AVAudioPCMBuffer ไม่มี channel data สำหรับ interleaved)
-        let targetFormat: AVAudioFormat
-        if isFloat {
-            targetFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: channels, interleaved: false)!
-        } else {
-            targetFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: sampleRate, channels: channels, interleaved: false)!
-        }
-        guard let pcm = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: AVAudioFrameCount(frames)) else { return }
-        pcm.frameLength = AVAudioFrameCount(frames)
-
-        let available = lengthAtOffset / bytesPerSample
-        let sampleCount = min(frames * Int(channels), available)
-
-        if isFloat {
-            guard let dst = pcm.floatChannelData else { return }
-            let src = ptr.assumingMemoryBound(to: Float.self)
-            for i in 0..<sampleCount {
-                let ch = i % Int(channels)
-                dst[ch][i / Int(channels)] = src[i]
-            }
-        } else {
-            guard let dst = pcm.int16ChannelData else { return }
-            let src = ptr.assumingMemoryBound(to: Int16.self)
-            for i in 0..<sampleCount {
-                let ch = i % Int(channels)
-                dst[ch][i / Int(channels)] = src[i]
-            }
-        }
-        process(pcm: pcm)
-    }
-
-    // MARK: - ไมโครโฟน (แน่นอนว่าได้ ใช้เป็นทางหลักได้)
+    // MARK: - ไมโครโฟน
 
     func startMic() throws {
-        if micActive { return }
+        if engine != nil { return }
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
         try session.setActive(true)
@@ -103,7 +42,6 @@ final class AudioTap {
         engine.prepare()
         try engine.start()
         self.engine = engine
-        micActive = true
     }
 
     func stopMic() {
@@ -111,7 +49,6 @@ final class AudioTap {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         self.engine = nil
-        micActive = false
     }
 
     // MARK: - แปลง + ตัดเป็นชิ้น 1 วินาที
@@ -129,8 +66,7 @@ final class AudioTap {
             let slice = Array(pending.prefix(chunkFrames))
             pending.removeFirst(chunkFrames)
             let wav = AudioTap.makeWAV(samples: slice, sampleRate: Int(targetSampleRate))
-            let level = AudioTap.rms(slice)
-            onChunk?(wav, level)
+            onChunk?(wav, AudioTap.rms(slice))
         }
     }
 
