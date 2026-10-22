@@ -132,7 +132,7 @@ final class WebOverlayController: NSObject, WKNavigationDelegate {
                     .foregroundColor: UIColor.white,
                     .strokeColor: UIColor.black.withAlphaComponent(0.9),
                     .strokeWidth: -3.0,
-                    .paragraphStyle: centeredParagraph()
+                    .paragraphStyle: self.centeredParagraph()
                 ]
             )
             label.attributedText = attributed

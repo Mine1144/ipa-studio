@@ -284,6 +284,14 @@ private final class SampleBufferPlaybackDelegate: NSObject, AVPictureInPictureSa
         owner?.handleSetPlaying(playing)
     }
 
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        startPlayingWithCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        owner?.handleSetPlaying(true)
+        completionHandler()
+    }
+
     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, finishPlaybackWithCompletionHandler completionHandler: @escaping () -> Void) {
         completionHandler()
     }

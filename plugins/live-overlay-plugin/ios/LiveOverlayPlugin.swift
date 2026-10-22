@@ -421,7 +421,7 @@ public class LiveOverlayPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func analyzeFaces(_ call: CAPPluginCall) {
         let raw = call.getString("base64") ?? ""
         let cleaned = raw.replacingOccurrences(of: "data:image/jpeg;base64,", with: "")
-        guard let data = Data(base64: cleaned),
+        guard let data = Data(base64Encoded: cleaned),
               let image = UIImage(data: data),
               let cgImage = image.cgImage else {
             call.reject("อ่านรูปไม่สำเร็จ")
