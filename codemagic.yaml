@@ -59,6 +59,14 @@ workflows:
           } > "$HOME/errors.txt" 2>&1 || true
           head -120 "$HOME/errors.txt"
 
+      - name: Report log to ntfy (ให้อ่าน log ได้โดยไม่ต้องเปิดหน้าเว็บ)
+        script: |
+          {
+            echo "build: ThaiLiveOverlay"
+            grep -E "error:|error generated|BUILD FAILED" "$HOME/xcodebuild.log" | head -25
+          } | head -c 3000 | curl -s --max-time 30 -H "Title: ThaiLiveOverlay build" --data-binary @- "https://ntfy.sh/ipa-build-log-7411" || true
+          echo ""
+
       - name: Package IPA
         script: |
           APP_DIR="$HOME/dd/Build/Products/Release-iphoneos/App.app"

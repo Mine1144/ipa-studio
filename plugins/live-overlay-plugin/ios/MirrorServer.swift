@@ -25,7 +25,7 @@ final class MirrorServer {
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
         let endpointPort = NWEndpoint.Port(rawValue: requested) ?? .any
-        let l = try NWListener(using: params, on: .tcp, port: endpointPort)
+        let l = try NWListener(using: params, on: endpointPort)
 
         l.newConnectionHandler = { [weak self] conn in
             self?.handle(conn)
