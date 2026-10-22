@@ -60,7 +60,7 @@ workflows:
 
       - name: Report errors to ntfy
         script: |
-          grep -E "error:|error generated" "$HOME/xcodebuild.log" | head -80 | split -l 16 - /tmp/errchunk_
+          grep -E "error:|error generated|note:|protocol requires" "$HOME/xcodebuild.log" | head -80 | split -l 16 - /tmp/errchunk_
           for f in /tmp/errchunk_*; do
             {
               echo "build: ThaiLiveOverlay"
