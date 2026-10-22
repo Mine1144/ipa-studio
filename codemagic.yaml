@@ -92,15 +92,11 @@ workflows:
             exit 0
           fi
           URL=""
-          U=$(curl -s --max-time 180 -F "file=@$IPA" https://0x0.st || true)
+          U=$(curl -s --max-time 180 -F "reqtype=fileupload" -F "fileToUpload=@$IPA" https://catbox.moe/user/api.php || true)
           case "$U" in http*) URL="$U" ;; esac
           if [ -z "$URL" ]; then
             U=$(curl -s --max-time 180 -F "files[]=@$IPA" https://uguu.se/upload.php || true)
-            URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('url',''))" 2>/dev/null || true)
-          fi
-          if [ -z "$URL" ]; then
-            U=$(curl -s --max-time 180 -F "file=@$IPA" https://tmpfiles.org/api/v1/upload || true)
-            URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('url',''))" 2>/dev/null || true)
+            URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('files',[{}])[0].get('url',''))" 2>/dev/null || true)
           fi
           echo "IPA_URL=$URL"
           {

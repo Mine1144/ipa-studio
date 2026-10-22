@@ -255,7 +255,6 @@ public class LiveOverlayPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async {
             self.beginCapture(call)
         }
-        }
     }
 
     private func beginCapture(_ call: CAPPluginCall) {
