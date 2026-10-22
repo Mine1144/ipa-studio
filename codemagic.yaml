@@ -1,0 +1,65 @@
+﻿# Codemagic — build .ipa สำหรับแอป Capacitor (ไม่ต้องใช้ GitHub Actions)
+# ใช้: https://codemagic.io → Add application → เลือก repo → Start build
+# ไฟล์นี้อยู่ที่รากโปรเจกต์ ให้ Codemagic อ่าน config เอง
+
+workflows:
+  ios_ipa:
+    name: Build IPA
+    instance_type: mac_mini_m2
+    xcode_version: "26.0"
+    max_build_duration: 60
+    scripts:
+      - name: Select Node
+        script: |
+          echo "export NVM_DIR=\"$HOME/.nvm\"" >> "$BASH_ENV"
+          echo "source $NVM_DIR/nvm.sh" >> "$BASH_ENV"
+          nvm install 22
+          nvm use 22
+          node --version
+
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Sync Capacitor (www -> ios)
+        script: npx cap sync ios
+
+      - name: Resolve Swift packages
+        script: |
+          xcodebuild -resolvePackageDependencies \
+            -project ios/App/App.xcodeproj \
+            -scheme App
+
+      - name: Build app (Release / device)
+        script: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$HOME/dd" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package IPA
+        script: |
+          APP_DIR="$HOME/dd/Build/Products/Release-iphoneos/App.app"
+          if [ ! -d "$APP_DIR" ]; then
+            echo "::error::App bundle not found"
+            exit 1
+          fi
+          rm -rf "$HOME/ipa"
+          mkdir -p "$HOME/ipa/Payload"
+          cp -R "$APP_DIR" "$HOME/ipa/Payload/ThaiLiveOverlay.app"
+          file "$HOME/ipa/Payload/ThaiLiveOverlay.app/ThaiLiveOverlay" || true
+          cd "$HOME/ipa"
+          zip -qry "$HOME/ThaiLiveOverlay-unsigned.ipa" Payload
+          ls -lh "$HOME/ThaiLiveOverlay-unsigned.ipa"
+
+    artifacts:
+      - path: "$HOME/ThaiLiveOverlay-unsigned.ipa"
+        type: file
+
