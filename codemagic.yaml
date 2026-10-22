@@ -1,13 +1,14 @@
-﻿# Codemagic — build .ipa สำหรับแอป Capacitor (ไม่ต้องใช้ GitHub Actions)
-# ใช้: https://codemagic.io → Add application → เลือก repo → Start build
-# ไฟล์นี้อยู่ที่รากโปรเจกต์ ให้ Codemagic อ่าน config เอง
+# Codemagic — build .ipa สำหรับแอป Capacitor (ไม่ต้องใช้ GitHub Actions)
+# ใช้: https://codemagic.io → เลือก repo → Start build
+# โครงสร้างตาม schema ปัจจุบัน: environment.xcode (ไม่ใช่ xcode_version), artifacts เป็นลิสต์ข้อความ
 
 workflows:
   ios_ipa:
     name: Build IPA
     instance_type: mac_mini_m2
-    xcode_version: "26.0"
     max_build_duration: 60
+    environment:
+      xcode: "26.0"
     scripts:
       - name: Select Node
         script: |
@@ -60,6 +61,4 @@ workflows:
           ls -lh "$HOME/ThaiLiveOverlay-unsigned.ipa"
 
     artifacts:
-      - path: "$HOME/ThaiLiveOverlay-unsigned.ipa"
-        type: file
-
+      - "$HOME/ThaiLiveOverlay-unsigned.ipa"
