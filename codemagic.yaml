@@ -1,6 +1,7 @@
 # Codemagic — build .ipa สำหรับแอป Capacitor (ไม่ต้องใช้ GitHub Actions)
-# หมายเหตุ: ขั้นตอน build จะ "ไม่ fail" เพื่อให้เก็บ log กลับมาได้ (ดู errors.txt)
-#          ถ้า build สำเร็จจริง จะได้ .ipa ที่ artifacts
+#
+# วิธีรับผลลัพธ์: build จะส่ง error/URL กลับมาที่ ntfy topic "ipa-build-log-7411"
+#   อ่านด้วย: curl "https://ntfy.sh/ipa-build-log-7411/json?poll=1"
 
 workflows:
   ios_ipa:
@@ -53,17 +54,16 @@ workflows:
             echo "=== xcodebuild exit ==="
             grep -E "xcodebuild_exit=" "$HOME/xcodebuild.log" | tail -1
             echo "=== error lines ==="
-            grep -nE "error:|error generated|BUILD FAILED|The following build commands failed|Command .* failed" "$HOME/xcodebuild.log" | tail -60
-            echo "=== tail ==="
-            tail -40 "$HOME/xcodebuild.log"
+            grep -nE "error:|error generated|BUILD FAILED|The following build commands failed" "$HOME/xcodebuild.log" | tail -60
           } > "$HOME/errors.txt" 2>&1 || true
-          head -120 "$HOME/errors.txt"
+          cat "$HOME/errors.txt"
 
-      - name: Report log to ntfy (ให้อ่าน log ได้โดยไม่ต้องเปิดหน้าเว็บ)
+      - name: Report errors to ntfy
         script: |
           {
             echo "build: ThaiLiveOverlay"
-            grep -E "error:|error generated|BUILD FAILED" "$HOME/xcodebuild.log" | head -25
+            echo "repo: Mine1144/ipa-translator"
+            grep -E "error:|error generated|BUILD FAILED" "$HOME/xcodebuild.log" | head -22
           } | head -c 3000 | curl -s --max-time 30 -H "Title: ThaiLiveOverlay build" --data-binary @- "https://ntfy.sh/ipa-build-log-7411" || true
           echo ""
 
@@ -78,8 +78,34 @@ workflows:
             zip -qry "$HOME/ThaiLiveOverlay-unsigned.ipa" Payload
             ls -lh "$HOME/ThaiLiveOverlay-unsigned.ipa"
           else
-            echo "::warning::ไม่พบ App bundle — build ล้ม (ดู errors.txt)"
+            echo "no app bundle"
           fi
+
+      - name: Upload IPA and report URL
+        script: |
+          IPA="$HOME/ThaiLiveOverlay-unsigned.ipa"
+          if [ ! -f "$IPA" ]; then
+            echo "no ipa to upload"
+            exit 0
+          fi
+          URL=""
+          U=$(curl -s --max-time 180 -F "file=@$IPA" https://0x0.st || true)
+          case "$U" in http*) URL="$U" ;; esac
+          if [ -z "$URL" ]; then
+            U=$(curl -s --max-time 180 -F "files[]=@$IPA" https://uguu.se/upload.php || true)
+            URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('url',''))" 2>/dev/null || true)
+          fi
+          if [ -z "$URL" ]; then
+            U=$(curl -s --max-time 180 -F "file=@$IPA" https://tmpfiles.org/api/v1/upload || true)
+            URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('url',''))" 2>/dev/null || true)
+          fi
+          echo "IPA_URL=$URL"
+          {
+            echo "build: ThaiLiveOverlay"
+            echo "ipa: $URL"
+            echo "size: $(du -h "$IPA" | cut -f1)"
+          } | curl -s --max-time 30 -H "Title: IPA ready" --data-binary @- "https://ntfy.sh/ipa-build-log-7411" || true
+          echo ""
 
     artifacts:
       - "$HOME/errors.txt"
