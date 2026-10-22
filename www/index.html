@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="color-scheme" content="dark" />
+  <title>ไทยซับ — แปลสดแบบซ้อนทับ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot" id="statusDot"></span>
+        <span class="brand-name">ไทยซับ</span>
+        <span class="brand-sub" id="statusText">กำลังเตรียมระบบ…</span>
+      </div>
+      <button class="icon-btn" id="btnQuickSettings" aria-label="ตั้งค่า">⚙︎</button>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab is-active" data-tab="live" role="tab">สด</button>
+      <button class="tab" data-tab="cast" role="tab">ตัวละคร</button>
+      <button class="tab" data-tab="settings" role="tab">ตั้งค่า</button>
+    </nav>
+
+    <!-- ============ สด ============ -->
+    <section class="panel is-active" id="panel-live">
+      <div class="chip-row" role="group" aria-label="โหมดการแสดงผล">
+        <button class="chip is-active" data-mode="both">ทั้งคู่</button>
+        <button class="chip" data-mode="translate">โหมดแปล</button>
+        <button class="chip" data-mode="commentator">โหมดคอมเมนต์</button>
+      </div>
+
+      <div class="subtitle-card" id="subtitleCard">
+        <div class="subtitle-speaker" id="subSpeaker"></div>
+        <div class="subtitle-text" id="subText">กด “จับหน้าจอ” หรือ “เล่นคลิปในแอป” เพื่อเริ่ม</div>
+        <div class="subtitle-meta" id="subMeta"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnOverlay">เปิด Overlay (PiP)</button>
+        <button class="btn btn-danger" id="btnCapture">จับหน้าจอ</button>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-sm" id="btnOverlayHide">ซ่อนซับ (เล่นเกมเต็มจอ)</button>
+        <button class="btn btn-sm" id="btnOverlayShow">แสดงซับอีกครั้ง</button>
+        <button class="btn btn-sm btn-ghost" id="btnTts">อ่านซับออกเสียง: ปิด</button>
+      </div>
+      <p class="muted">PiP เป็นหน้าต่างเล็กลอยทับ — พื้นที่ที่มันไม่ครอบก็แตะเล่นเกมได้ปกติ ย้ายไปมุมที่ไม่มี HUD ไว้</p>
+
+      <div class="card">
+        <div class="card-head"><h2>จอที่สอง (ซับเต็มจอทับเกม App Store)</h2></div>
+        <p class="muted">ส่งภาพเกม + ซับไทยไปจออื่น (iPad / Mac / PC) ผ่าน Wi-Fi เดียวกัน — เล่นเกมบน iPhone เต็มจอ (แตะเล่นได้จริง) แล้วดูภาพ+ซับไทยเต็มจอบนจอที่สอง</p>
+        <div class="row">
+          <button class="btn btn-sm" id="btnMirror">เปิดจอที่สอง</button>
+          <button class="btn btn-sm btn-ghost" id="btnMirrorStop">หยุด</button>
+          <span class="muted" id="mirrorUrl"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>เกมเว็บในแอป (ฝังเกมที่ build เป็นเว็บ)</h2></div>
+        <p class="muted">เกม Ren'Py / RPG Maker / Twine ที่ export เป็นเว็บ → วางโฟลเดอร์เกมไว้ใน Files &gt; ไทยซับ &gt; Documents → เปิดที่นี่ เกมจะเล่นเต็มจอในแอป พร้อมซับไทยทับทับ</p>
+        <div class="row">
+          <input type="text" id="gamePath" value="index.html" placeholder="index.html" />
+          <button class="btn btn-sm" id="btnOpenGame">เปิดเกม</button>
+          <button class="btn btn-sm btn-ghost" id="btnServe">เปิดเซิร์ฟเวอร์</button>
+        </div>
+        <span class="muted" id="serveStatus"></span>
+      </div>
+
+      <details class="card" id="openAppCard">
+        <summary>เปิดแอปอื่น (PiP ยังลอยทับอยู่)</summary>
+        <p class="muted">เปิดแอป/เว็บอื่นแล้วซับไทยของเราจะยังลอยทับอยู่บนหน้าจอ (ต้องเปิด Overlay ไว้ก่อน)</p>
+        <div class="row">
+          <input type="text" id="appUrl" placeholder="URL หรือ scheme เช่น youtube://" />
+          <button class="btn btn-sm" id="btnOpenApp">เปิด</button>
+        </div>
+        <div class="chip-row" id="appPresets">
+          <button class="chip" data-scheme="https://www.youtube.com">YouTube เว็บ</button>
+          <button class="chip" data-scheme="youtube://">YouTube แอป</button>
+          <button class="chip" data-scheme="twitch://">Twitch</button>
+          <button class="chip" data-scheme="line://">LINE</button>
+          <button class="chip" data-scheme="fb://">Facebook</button>
+          <button class="chip" data-scheme="instagram://">Instagram</button>
+          <button class="chip" data-scheme="https://www.google.com">Safari เว็บ</button>
+        </div>
+      </details>
+
+      <details class="card" id="webCard">
+        <summary>เปิดเว็บในแอป (เอาเนื้อหาอื่นมาแปล — เต็มจอ)</summary>
+        <p class="muted">พิมพ์ URL เช่น เกมบนเว็บ / ไลฟ์ Twitch / YouTube / เว็บนิยาย แล้วแอปจะเปิดเต็มจอ พร้อมวางซับไทยทับทับ (ต้องเปิด "จับหน้าจอ" ไว้ด้วยเพื่ออ่านข้อความ)</p>
+        <div class="row">
+          <input type="url" id="webUrl" placeholder="https://..." />
+          <button class="btn btn-sm" id="btnOpenWeb">เปิด</button>
+          <button class="btn btn-sm btn-ghost" id="btnCloseWeb">ปิด</button>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="webAutoCapture" checked />
+          <span>เปิดโหมดเว็บแล้วเริ่มจับหน้าจออัตโนมัติ</span>
+        </label>
+      </details>
+
+      <details class="card" id="videoCard">
+        <summary>โหมดเล่นคลิปในแอป (ไม่ต้องจับหน้าจอ)</summary>
+        <div class="row">
+          <input type="url" id="videoUrl" placeholder="https://... (วิดีโอ/ไลฟ์)" />
+          <button class="btn btn-sm" id="btnLoadUrl">โหลด</button>
+        </div>
+        <div class="row">
+          <input type="file" id="videoFile" accept="video/*" />
+        </div>
+        <video id="video" playsinline muted></video>
+      </details>
+
+      <details class="card" id="logCard">
+        <summary>บันทึกการวิเคราะห์</summary>
+        <div class="log" id="log"></div>
+      </details>
+    </section>
+
+    <!-- ============ ตัวละคร ============ -->
+    <section class="panel" id="panel-cast">
+      <div class="card">
+        <div class="card-head">
+          <h2>ตัวละครที่จำได้</h2>
+          <button class="btn btn-sm btn-ghost" id="btnClearMemory">ล้างความจำ</button>
+        </div>
+        <div id="castList" class="cast-list"><p class="muted">ยังไม่มีข้อมูล</p></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>ไทม์ไลน์ฉาก</h2></div>
+        <div id="timeline" class="timeline"><p class="muted">ยังไม่มีข้อมูล</p></div>
+      </div>
+    </section>
+
+    <!-- ============ ตั้งค่า ============ -->
+    <section class="panel" id="panel-settings">
+      <div class="card">
+        <div class="card-head"><h2>Opentyphoon API</h2></div>
+        <label class="field">
+          <span>API key</span>
+          <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
+        </label>
+        <div class="row">
+          <button class="btn btn-sm" id="btnTestApi">ทดสอบการเชื่อมต่อ</button>
+          <span class="muted" id="apiTestResult"></span>
+        </div>
+        <label class="field">
+          <span>Base URL</span>
+          <input type="text" id="baseUrl" value="https://api.opentyphoon.ai/v1" />
+        </label>
+        <label class="field">
+          <span>โมเดลข้อความ</span>
+          <select id="model">
+            <option value="typhoon-v2.5-30b-a3b-instruct">typhoon-v2.5-30b-a3b-instruct (แม่นสุด)</option>
+            <option value="typhoon-v2.1-12b-instruct">typhoon-v2.1-12b-instruct (เร็ว/ถูก)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>การวิเคราะห์ภาพและเสียง</h2></div>
+        <label class="switch">
+          <input type="checkbox" id="ocrEnabled" checked />
+          <span>OCR อ่านข้อความบนจอ (typhoon-ocr)</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="facesEnabled" checked />
+          <span>อ่านสีหน้า (Vision framework บนเครื่อง)</span>
+        </label>
+        <label class="field">
+          <span>แหล่งเสียงที่ถอดด้วย ASR</span>
+          <select id="asrSource">
+            <option value="off">ปิด — ใช้แค่ OCR</option>
+            <option value="system">เสียงระบบจาก ReplayKit (ต้องเทสบนเครื่องจริง)</option>
+            <option value="mic">ไมโครโฟนของผู้ใช้ (ใช้ได้แน่นอน)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>ถอดเสียงทุก (วินาที) — ASR จำกัด 100 ครั้ง/นาที</span>
+          <input type="number" id="asrEverySec" min="2" max="20" step="1" value="5" />
+        </label>
+        <div class="row">
+          <button class="btn btn-sm" id="btnMic">เปิดไมโครโฟน</button>
+          <span class="muted" id="audioLevel">ระดับเสียง: —</span>
+        </div>
+        <label class="field">
+          <span>วิเคราะห์ภาพทุก (วินาที) — OCR จำกัด 20 ครั้ง/นาที</span>
+          <input type="number" id="intervalSec" min="2" max="30" step="1" value="4" />
+        </label>
+        <label class="field">
+          <span>ความกว้างภาพสูงสุด (px)</span>
+          <input type="number" id="maxWidth" min="320" max="1600" step="80" value="900" />
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>น้ำเสียงการแปล</h2></div>
+        <label class="field">
+          <span>ระดับภาษาเริ่มต้น</span>
+          <select id="register">
+            <option value="auto">อัตโนมัติ (ตามวัย/อารมณ์ตัวละคร)</option>
+            <option value="polite">สุภาพ (คุณ/ผม–ฉัน)</option>
+            <option value="neutral">กลาง (เลย/ฉัน)</option>
+            <option value="casual">เถาะ (กู/มึง)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>คำที่ใช้เรียกผู้อื่น</span>
+          <input type="text" id="addressTerm" placeholder="เช่น เธอ, คุณ, เถ้ง" />
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="keepTone" checked />
+          <span>คงน้ำเสียงต้นฉบับ (โกรธยังโกรธ, เศร้ายังเศร้า)</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>โหมดคอมเมนต์</h2></div>
+        <label class="field">
+          <span>บุคลิก</span>
+          <select id="persona">
+            <option value="ต้น">ต้น — เพื่อนร่วมทีม ตลก ๆ</option>
+            <option value="หมอ">หมอ — นักวิเคราะห์เกม</option>
+            <option value="บิ๊ก">บิ๊ก — คอมเมนเตอร์ตัวร้อน</option>
+          </select>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="ttsEnabled" />
+          <span>อ่านซับออกเสียง (เสียงไทย)</span>
+        </label>
+        <label class="field">
+          <span>ความเร็วเสียงพูด</span>
+          <input type="range" id="ttsRate" min="0.3" max="0.7" step="0.05" value="0.5" />
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>ข้อมูล</h2></div>
+        <div class="row">
+          <button class="btn btn-sm btn-ghost" id="btnExport">ส่งออกความจำ (JSON)</button>
+          <button class="btn btn-sm btn-danger" id="btnReset">ล้างทั้งหมด</button>
+        </div>
+        <p class="muted">คีย์และความจำถูกเก็บในเครื่อง (localStorage) ไม่ได้ส่งออกไปที่ไหนนอกจาก API ที่ตั้งไว้</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="local-config.js"></script>
+  <script src="ai.js"></script>
+  <script src="prompts.js"></script>
+  <script src="memory.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "ipa-studio",
+  "version": "1.0.0",
+  "description": "Capacitor -> iOS IPA pipeline for LiveContainer",
+  "scripts": {
+    "sync": "cap sync ios",
+    "copy": "cap copy ios",
+    "open:ios": "cap open ios",
+    "serve": "npx --yes http-server www -p 5173 -c-1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "live-overlay-plugin": "file:plugins/live-overlay-plugin"
+  }
+}

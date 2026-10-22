@@ -1,0 +1,17 @@
+{
+  "name": "live-overlay-plugin",
+  "version": "1.0.0",
+  "description": "Native iOS plugin: ReplayKit capture + Picture-in-Picture subtitle overlay + Vision face cues",
+  "license": "MIT",
+  "main": "index.js",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "keywords": [
+    "capacitor",
+    "plugin",
+    "native"
+  ]
+}

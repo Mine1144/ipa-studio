@@ -1,0 +1,10 @@
+{
+  "appId": "com.natee.thailiveoverlay",
+  "appName": "ThaiLiveOverlay",
+  "webDir": "www",
+  "backgroundColor": "#0a0c11",
+  "ios": {
+    "contentInset": "always",
+    "scrollEnabled": false
+  }
+}

@@ -1,0 +1,88 @@
+name: Build IPA (iOS)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ipa-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build IPA for LiveContainer
+    runs-on: macos-26 # macOS 26 Tahoe = Xcode 26.x (Capacitor 8 ต้องการ Xcode 26+)
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor (www -> ios)
+        run: npx cap sync ios
+
+      - name: Verify native plugin registered
+        run: |
+          grep -q "LiveOverlayPlugin" ios/App/App/capacitor.config.json || {
+            echo "::error::LiveOverlayPlugin ไม่ได้ถูก register ใน packageClassList"; exit 1; }
+          grep -q "LiveOverlayPlugin" ios/App/CapApp-SPM/Package.swift || {
+            echo "::error::LiveOverlayPlugin ไม่ได้ถูกเพิ่มใน Package.swift"; exit 1; }
+          echo "native plugin wired OK"
+
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project ios/App/App.xcodeproj \
+            -scheme App
+
+      - name: Build app (Release / device)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package .ipa
+        run: |
+          APP_DIR="$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/App.app"
+          if [ ! -d "$APP_DIR" ]; then
+            echo "::error::App bundle not found at $APP_DIR"
+            exit 1
+          fi
+          rm -rf "$RUNNER_TEMP/ipa"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP_DIR" "$RUNNER_TEMP/ipa/Payload/ThaiLiveOverlay.app"
+          # ตัว executable ต้องเป็น Mach-O arm64 (ตรวจสอบเบื้องต้น)
+          file "$RUNNER_TEMP/ipa/Payload/ThaiLiveOverlay.app/ThaiLiveOverlay" || true
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry "ThaiLiveOverlay-unsigned.ipa" Payload
+          ls -lh "ThaiLiveOverlay-unsigned.ipa"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 30
