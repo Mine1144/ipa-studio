@@ -92,17 +92,27 @@ workflows:
             exit 0
           fi
           URL=""
-          U=$(curl -s --max-time 180 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" -F "reqtype=fileupload" -F "fileToUpload=@$IPA" https://catbox.moe/user/api.php || true)
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15"
+          U=$(curl -s --max-time 180 -A "$UA" -F "reqtype=fileupload" -F "fileToUpload=@$IPA" https://catbox.moe/user/api.php || true)
           case "$U" in http*) URL="$U" ;; esac
           if [ -z "$URL" ]; then
-            U=$(curl -s --max-time 180 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" -F "files[]=@$IPA" https://uguu.se/upload.php || true)
+            U=$(curl -s --max-time 180 -A "$UA" -F "files[]=@$IPA" https://uguu.se/upload.php || true)
             URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('files',[{}])[0].get('url',''))" 2>/dev/null || true)
           fi
           if [ -z "$URL" ]; then
-            U=$(curl -s --max-time 180 -A "Mozilla/5.0" -F "file=@$IPA" https://0x0.st || true)
+            U=$(curl -s --max-time 180 -A "$UA" -F "file=@$IPA" https://file.io || true)
+            URL=$(echo "$U" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('url',''))" 2>/dev/null || true)
+          fi
+          if [ -z "$URL" ]; then
+            U=$(curl -s --max-time 180 -A "$UA" --upload-file "$IPA" "https://transfer.sh/$(basename "$IPA")" || true)
+            case "$U" in http*) URL="$U" ;; esac
+          fi
+          if [ -z "$URL" ]; then
+            U=$(curl -s --max-time 180 -A "$UA" -F "file=@$IPA" https://0x0.st || true)
             case "$U" in http*) URL="$U" ;; esac
           fi
           echo "IPA_URL=$URL"
+          echo "upload_response=$(echo "$U" | head -c 200)"
           {
             echo "build: ThaiLiveOverlay"
             echo "ipa: $URL"
