@@ -295,6 +295,38 @@ private final class SampleBufferPlaybackDelegate: NSObject, AVPictureInPictureSa
     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, finishPlaybackWithCompletionHandler completionHandler: @escaping () -> Void) {
         completionHandler()
     }
+
+    // MARK: - ข้อกำหนดที่เหลือของ AVPictureInPictureSampleBufferPlaybackDelegate
+
+    func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+        CMTimeRange(start: .zero, duration: .positiveInfinity)
+    }
+
+    func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+        false
+    }
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        didTransitionToRenderSize newRenderSize: CMVideoDimensions
+    ) {
+        // ใช้ขนาดเดิมของ canvas ไว้ (ภาพซับถูกวาดเป็น 16:9 อยู่แล้ว)
+    }
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        skipByInterval skipInterval: CMTime,
+        completion completionHandler: @escaping @Sendable () -> Void
+    ) {
+        completionHandler()
+    }
+
+    func pictureInPictureController(
+        _ pictureInPictureController: AVPictureInPictureController,
+        skipByInterval skipInterval: CMTime
+    ) async -> Void {
+        // ไม่ใช้การข้ามช่วงเวลา
+    }
 }
 
 /// delegate ของ PiP ตัวหลัก (ปุ่มปิด/กลับมาแอป)
