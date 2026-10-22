@@ -1,6 +1,6 @@
 # Codemagic — build .ipa สำหรับแอป Capacitor (ไม่ต้องใช้ GitHub Actions)
-# ใช้: https://codemagic.io → เลือก repo → Start build
-# โครงสร้างตาม schema ปัจจุบัน: environment.xcode (ไม่ใช่ xcode_version), artifacts เป็นลิสต์ข้อความ
+# หมายเหตุ: ขั้นตอน build จะ "ไม่ fail" เพื่อให้เก็บ log กลับมาได้ (ดู errors.txt)
+#          ถ้า build สำเร็จจริง จะได้ .ipa ที่ artifacts
 
 workflows:
   ios_ipa:
@@ -44,23 +44,36 @@ workflows:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee "$HOME/xcodebuild.log"
-          exit ${PIPESTATUS[0]}
+          echo "xcodebuild_exit=${PIPESTATUS[0]}" | tee -a "$HOME/xcodebuild.log"
+          exit 0
+
+      - name: Collect errors
+        script: |
+          {
+            echo "=== xcodebuild exit ==="
+            grep -E "xcodebuild_exit=" "$HOME/xcodebuild.log" | tail -1
+            echo "=== error lines ==="
+            grep -nE "error:|error generated|BUILD FAILED|The following build commands failed|Command .* failed" "$HOME/xcodebuild.log" | tail -60
+            echo "=== tail ==="
+            tail -40 "$HOME/xcodebuild.log"
+          } > "$HOME/errors.txt" 2>&1 || true
+          head -120 "$HOME/errors.txt"
 
       - name: Package IPA
         script: |
           APP_DIR="$HOME/dd/Build/Products/Release-iphoneos/App.app"
-          if [ ! -d "$APP_DIR" ]; then
-            echo "::error::App bundle not found"
-            exit 1
-          fi
           rm -rf "$HOME/ipa"
           mkdir -p "$HOME/ipa/Payload"
-          cp -R "$APP_DIR" "$HOME/ipa/Payload/ThaiLiveOverlay.app"
-          file "$HOME/ipa/Payload/ThaiLiveOverlay.app/ThaiLiveOverlay" || true
-          cd "$HOME/ipa"
-          zip -qry "$HOME/ThaiLiveOverlay-unsigned.ipa" Payload
-          ls -lh "$HOME/ThaiLiveOverlay-unsigned.ipa"
+          if [ -d "$APP_DIR" ]; then
+            cp -R "$APP_DIR" "$HOME/ipa/Payload/ThaiLiveOverlay.app"
+            cd "$HOME/ipa"
+            zip -qry "$HOME/ThaiLiveOverlay-unsigned.ipa" Payload
+            ls -lh "$HOME/ThaiLiveOverlay-unsigned.ipa"
+          else
+            echo "::warning::ไม่พบ App bundle — build ล้ม (ดู errors.txt)"
+          fi
 
     artifacts:
-      - "$HOME/ThaiLiveOverlay-unsigned.ipa"
+      - "$HOME/errors.txt"
       - "$HOME/xcodebuild.log"
+      - "$HOME/ThaiLiveOverlay-unsigned.ipa"
